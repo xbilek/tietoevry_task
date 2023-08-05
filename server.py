@@ -14,11 +14,18 @@ BUFFER_SIZE = 20
 def generate_random_string(size):
     return ''.join(random.choices(string.printable, k=size))
 
+def append_checksum(string):
+    string = string.encode()
+    checksum = sum(string) % 256
+    #checksum = checksum + 1 #uncomment to corrupt checksum
+    string = string + checksum.to_bytes(1, byteorder='big')
+    return string
+
 def listen_keyboard():
     while True:
         key = sys.stdin.read(1)
         if key == ' ':
-            data = generate_random_string(BUFFER_SIZE).encode()
+            data = append_checksum(generate_random_string(BUFFER_SIZE))
             client.sendall(data)
         elif key == '\x1b': # ESC
             print("Exiting server...")

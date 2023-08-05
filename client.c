@@ -8,8 +8,17 @@
 #include <string.h>
 
 #define PORT 10200
-#define BUFFER_SIZE 20
+#define BUFFER_SIZE 21
 #define ADDR "127.0.0.1"
+
+unsigned char calculate_checksum(const char *data, int length) {
+    unsigned int sum = 0;
+    for (int i = 0; i < length; i++) {
+        sum += (unsigned char)data[i];
+    }
+    return (unsigned char)(sum % 256);
+}
+
 
 int main(int argc, char **argv) {
     int s = socket(AF_INET, SOCK_STREAM, 0);
@@ -26,19 +35,28 @@ int main(int argc, char **argv) {
 
     char strData[BUFFER_SIZE];
 
-    while (1) { //client running loop
-        int bytesReceived = recv(s, strData, sizeof(strData), 0);
-        if (bytesReceived <= 0) {
-            perror("Connection closed or error while reading data");
-            break;
-        }
+    //main loop
+    while (1) {
+    int bytesReceived = recv(s, strData, sizeof(strData), 0);
+    if (bytesReceived <= 0) {
+        perror("Connection closed or error while reading data");
+        break;
+    }
 
-        printf("Received data: ");
-        for (int i = 0; i < bytesReceived; i++) {//printing every byte hexadecimaly
+    unsigned char receivedChecksum = (unsigned char)strData[bytesReceived - 1];
+    unsigned char calculatedChecksum = calculate_checksum(strData, bytesReceived - 1);
+
+
+    if (receivedChecksum == calculatedChecksum) {
+        printf("Checksum OK. Received data: ");
+        for (int i = 0; i < bytesReceived - 1; i++) {
             printf("%02X ", (unsigned char)strData[i]);
         }
         printf("\n");
+    } else {
+        printf("Checksum mismatch. Data might be corrupted.\n");
     }
+}
 
     close(s);
     return 0;
